@@ -1,41 +1,6 @@
 from aocd import submit, get_data
-import math
 
 data = get_data(day=5, year=2023)
-
-# data = """seeds: 79 14 55 13
-
-# seed-to-soil map:
-# 50 98 2
-# 52 50 48
-
-# soil-to-fertilizer map:
-# 0 15 37
-# 37 52 2
-# 39 0 15
-
-# fertilizer-to-water map:
-# 49 53 8
-# 0 11 42
-# 42 0 7
-# 57 7 4
-
-# water-to-light map:
-# 88 18 7
-# 18 25 70
-
-# light-to-temperature map:
-# 45 77 23
-# 81 45 19
-# 68 64 13
-
-# temperature-to-humidity map:
-# 0 69 1
-# 1 0 69
-
-# humidity-to-location map:
-# 60 56 37
-# 56 93 4"""
 
 data = data.split("\n\n")
 seeds = []
@@ -43,19 +8,19 @@ maps = []
 
 for i, item in enumerate(data):
     if i == 0:
-        seeds = map(int, item.split(":")[1].split())
+        seeds = list(map(int, item.split(":")[1].split()))
         continue
 
-    m = [map(int, i.split()) for i in item.split("\n")[1:]]
+    m = [list(map(int, i.split())) for i in item.split("\n")[1:]]
 
     # Obtain the limits for each map
     maps.append(m)
 
 
 def convert_seed_with_sub_map(seed, m):
-    [end, start, range] = m
+    end, start, r = m
 
-    if not start <= seed <= start + range:
+    if not start <= seed <= start + r:
         return None
 
     position = seed - start
@@ -88,89 +53,51 @@ def solve1():
     return lowest
 
 
-# def solve2_temp():
-#     lowest = None
-
-#     for i in range(0, len(seeds), 2):
-#         # According to the previous computed limits, we need to avoid to perform redundant computations.
-#         # For each interval select the least number
-#         start = seeds[i]
-#         end = seeds[i] + seeds[i + 1]
-
-#         # Split by ranges
-#         INCREMENT = 10000
-#         cursor = start + INCREMENT
-
-#         print("start", start, "end", end)
-
-#         # This is the guaranteed minimum for the current range
-#         current = convert_seed(start)
-#         current_temp = current
-
-#         if lowest is None:
-#             lowest = current
-
-#         if lowest < current:
-#             lowest = current
-#             continue
-
-#         while cursor < end:
-#             temp = convert_seed(cursor)
-
-#             # Find the first number that is not linear with the previous one
-#             if temp - INCREMENT == current_temp:
-#                 cursor += INCREMENT
-#                 current_temp = temp
-#                 continue
-
-#             # We found an anomaly in the sequence
-#             cursor -= INCREMENT
-#             current_temp = convert_seed(cursor)
-
-#             for i in range(1, INCREMENT):
-#                 temp = convert_seed(cursor + i)
-
-#                 if temp - i == current_temp:
-#                     continue
-
-#                 cursor += i
-#                 current_temp = temp
-
-#                 if lowest > temp:
-#                     lowest = temp
-
-#                 break
-
-#         cursor -= INCREMENT
-
-#         for i in range(0, len(cursor)):
-#             temp = convert_seed(cursor + i)
-
-#             if lowest > temp:
-#                 lowest = temp
-
-#     return min(lowest)
-
-
 def solve2():
     lowest = None
 
+    def get_min(seed):
+        min_stop = float("inf")
+        current = seed
+
+        for m in maps:
+            sub_map = next((s for s in m if s[1] <= current <= s[1] + s[2]), None)
+
+            if sub_map is None:
+                continue
+
+            dest, source, rng = sub_map
+
+            stop = rng - (current - source)
+
+            if stop < min_stop:
+                min_stop = stop
+
+            position = current - source
+            current = dest + position
+
+        return min_stop
+
+    # The sequence is linear for a certain range
     for i in range(0, len(seeds), 2):
         start = seeds[i]
         end = seeds[i] + seeds[i + 1]
 
-        print("Running", start, end)
-
         while start < end:
             temp = convert_seed(start)
-            start += 1
 
             if lowest is None or temp < lowest:
                 lowest = temp
 
+            increment = get_min(start)
+
+            if increment == 0:
+                increment = 1
+
+            start += increment
+
     return lowest
 
 
-print(solve2())
-
-# submit(part=2, day=5, year=2023, answer=solve2())
+submit(part=1, day=5, year=2023, answer=solve1())
+submit(part=2, day=5, year=2023, answer=solve2())
