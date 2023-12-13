@@ -171,4 +171,6 @@ def solve2():
     return lowest
 
 
+print(solve2())
+
 # submit(part=2, day=5, year=2023, answer=solve2())
