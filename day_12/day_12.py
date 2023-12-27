@@ -5,7 +5,6 @@ import math
 import itertools
 import re
 
-
 data = get_data(day=12, year=2023)
 
 # data = """???.### 1,1,3
@@ -23,79 +22,57 @@ for line in data.split("\n"):
     rows.append((info, numbers))
 
 
-def is_valid(line, groups, is_complete=True):
-    regex = r"#+" if is_complete else r"([#?]+)"
-    matches = list(re.finditer(regex, line))
-
-    if is_complete and len(matches) != len(groups):
-        return False
-
-    if not is_complete and len(matches) > len(groups):
-        matches = matches[: len(groups)]
-
-    for i, match in enumerate(matches):
-        length = match.end() - match.start()
-
-        if is_complete and length != groups[i]:
-            return False
-
-        if length < groups[i]:
-            return False
-
-    return True
+memory = {}
 
 
-def get_possibilities(line, groups):
+def memoize(f):
+    def inner(line, groups):
+        key = (line, *groups)
+
+        if key not in memory:
+            memory[key] = f(line, groups)
+
+        return memory[key]
+
+    return inner
+
+
+@memoize
+def count_possibilities(line, groups):
     total = 0
 
-    if "?" not in line:
-        if is_valid(line, groups):
-            return 1
-        else:
-            return 0
+    # If there are no more characters
+    if len(line) == 0:
+        return 1 if len(groups) == 0 else 0
 
-    index = line.index("?")
+    # If there are no more groups
+    if len(groups) == 0:
+        # And there are no more #'s
+        return 0 if "#" in line else 1
 
-    line2 = line[:index] + "." + line[index + 1 :]
-    total += get_possibilities(line2, groups)
+    # Replace with ? with .
+    if line[0] in ".?":
+        # In this case we also "swap" the ? with a .
+        total += count_possibilities(line[1:], groups)
 
-    line2 = line[:index] + "#" + line[index + 1 :]
-    # next_char = line[index + 1] if index + 1 < len(line2) else None
+    if line[0] in "#?":
+        if (
+            # If the current group length is in between the length of the line
+            groups[0] <= len(line)
+            # Remember that a group is always separated by a .
+            and "." not in line[: groups[0]]
+            # And the group is valid. The length matches of the next character is not a #
+            and (groups[0] == len(line) or line[groups[0]] != "#")
+        ):
+            total += count_possibilities(line[groups[0] + 1 :], groups[1:])
 
-    # if next_char == "#":
-    #     if not is_valid(line2, groups, False):
-    #         return total
-
-    total += get_possibilities(line2, groups)
     return total
 
 
-# 1
-# 4
-# 1
-# 1
-# 4
-# 10
+part1 = sum(count_possibilities(*l) for l in rows)
 
-# for row in rows:
-#     print(get_possibilities(*row))
+folded_rows = [("?".join([r] * 5), g * 5) for (r, g) in rows]
+part2 = sum(count_possibilities(*l) for l in folded_rows)
 
-# print(get_possibilities(*rows[2]))
-
-tot = 0
-
-print("Computing for", len(rows), "rows")
-
-for i, row in enumerate(rows):
-    tot += get_possibilities(*row)
-    print("Computed row", i)
-
-print("total", tot)
-
-part1 = sum(get_possibilities(*l) for l in rows)
-# print(part1)
-
-# 6986 - too low
-
-# submit(part=1, day=12, year=2023, answer=get_total_distance())
-# submit(part=2, day=12, year=2023, answer=get_total_distance(1000000 - 1))
+submit(part=1, day=12, year=2023, answer=part1)
+submit(part=2, day=12, year=2023, answer=part2)
